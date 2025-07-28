@@ -1,0 +1,7 @@
+{
+  "name": "Aplikasi Absensi Aeryn Salon",
+  "description": "Aplikasi web modern untuk mengelola absensi staf salon. Dilengkapi dengan fitur manajemen staf (tambah, edit, hapus), absensi via scan QR, dan ringkasan absensi cerdas yang didukung AI Gemini untuk manajer salon.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
