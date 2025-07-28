@@ -40,7 +40,7 @@ const QrScannerModal: React.FC<QrScannerModalProps> = ({ isOpen, onClose, onScan
     };
 
     html5QrCode.start(
-      { facingMode: "environment" },
+      { facingMode: { ideal: "environment" },
       config,
       qrCodeSuccessCallback,
       qrCodeErrorCallback
