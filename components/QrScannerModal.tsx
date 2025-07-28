@@ -11,41 +11,69 @@ const qrReaderId = "qr-code-reader";
 
 const QrScannerModal: React.FC<QrScannerModalProps> = ({ isOpen, onClose, onScanSuccess }) => {
   useEffect(() => {
-    if (isOpen) {
-      const html5QrCode = new Html5Qrcode(qrReaderId);
-      
-      const config = { fps: 10, qrbox: { width: 250, height: 250 } };
-
-      const qrCodeSuccessCallback = (decodedText: string, decodedResult: any) => {
-        html5QrCode.stop().then(() => {
-          onScanSuccess(decodedText);
-        }).catch(err => {
-            console.error("Failed to stop QR code scanner.", err);
-            // Still call success callback even if stopping fails
-            onScanSuccess(decodedText);
-        });
-      };
-      
-      const qrCodeErrorCallback = (errorMessage: string) => {
-        // console.log(errorMessage);
-      };
-
-      html5QrCode.start(
-        { facingMode: "environment" },
-        config,
-        qrCodeSuccessCallback,
-        qrCodeErrorCallback
-      ).catch(err => {
-        console.error("Unable to start scanning.", err);
-        alert(`Error: Tidak dapat memulai kamera. ${err.message}. Pastikan Anda memberikan izin kamera.`);
-        onClose();
-      });
-
-      return () => {
-        // Ensure scanner is stopped on component unmount or if modal closes unexpectedly
-        html5QrCode.isScanning && html5QrCode.stop().catch(err => console.error("Error stopping scanner on cleanup:", err));
-      };
+    if (!isOpen) {
+      return;
     }
+
+    // This object is created only when the modal is open.
+    const html5QrCode = new Html5Qrcode(qrReaderId);
+    let isScannerStopped = false;
+    
+    const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+
+    const qrCodeSuccessCallback = (decodedText: string, decodedResult: any) => {
+      if (isScannerStopped) return;
+      isScannerStopped = true;
+
+      html5QrCode.stop().then(() => {
+        onScanSuccess(decodedText);
+      }).catch(err => {
+          console.error("Failed to stop QR code scanner.", err);
+          // Still call success callback even if stopping fails
+          onScanSuccess(decodedText);
+      });
+    };
+    
+    const qrCodeErrorCallback = (errorMessage: string) => {
+      // This callback is called for non-fatal errors, like QR code not found in frame.
+      // We can ignore it for a cleaner console.
+    };
+
+    html5QrCode.start(
+      { facingMode: "environment" },
+      config,
+      qrCodeSuccessCallback,
+      qrCodeErrorCallback
+    ).catch(err => {
+      console.error("Unable to start scanning.", err);
+      
+      let errorMessage = "Terjadi masalah yang tidak diketahui.";
+      if (typeof err === 'string') {
+          errorMessage = err;
+      } else if (err && err.name) {
+          if (err.name === 'NotAllowedError') {
+              errorMessage = "Izin penggunaan kamera ditolak oleh Anda atau browser.";
+          } else if (err.name === 'NotFoundError') {
+              errorMessage = "Tidak ada kamera yang ditemukan di perangkat ini.";
+          } else if (err.name === 'NotReadableError') {
+              errorMessage = "Kamera sedang digunakan oleh aplikasi lain atau terjadi error pada hardware.";
+          } else {
+              errorMessage = err.message || err.name;
+          }
+      } else if (err && err.message) {
+          errorMessage = err.message;
+      }
+
+      alert(`Error: Tidak dapat memulai kamera.\n\nDetail: ${errorMessage}\n\nPastikan Anda telah memberikan izin kamera untuk situs ini dan tidak ada aplikasi lain yang sedang menggunakannya.`);
+      onClose();
+    });
+
+    return () => {
+      // Cleanup function to stop scanner when component unmounts or modal closes.
+      if (!isScannerStopped && html5QrCode && html5QrCode.isScanning) {
+        html5QrCode.stop().catch(err => console.error("Error stopping scanner on cleanup:", err));
+      }
+    };
   }, [isOpen, onScanSuccess, onClose]);
 
   if (!isOpen) {
